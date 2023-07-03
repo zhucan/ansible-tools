@@ -1,0 +1,17 @@
+- hosts: servers
+  remote_user: root
+  tasks:
+  - name: filter boot disk
+    shell: 
+
+  - name: set iodepth
+    shell:
+  
+  - name: set devices
+    shell: 
+
+  - name: set blocksize
+    shell:
+    
+  - name: set numjobs
+    shell:
