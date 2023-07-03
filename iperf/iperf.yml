@@ -2,16 +2,25 @@
   remote_user: root
   tasks:
   - name: start server iperf
-    shell: iperf3 --server --one-off --daemon
+    shell: iperf --server --daemon
 
 - hosts: clients
   remote_user: root
+  serial: 1
   tasks:
   - name: set iperf server
-    set_fact: iperf_server="{{ groups['servers'][groups['clients'].index(inventory_hostname)] }}"
+    with_inventory_hostnames: ["servers"]
+    set_fact: iperf_server="{{ item }}"
+  
+  - name: set output directory
+    set_fact: output_dir="/tmp/iperf/"
+
+  - name: print iperf server  
+    debug:
+      msg: "{{ iperf_server }}"
 
   - name: set output base
-    set_fact: output_base="{{ ansible_date_time.date }}_{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}_{{ iperf_server }}.out"
+    set_fact: output_base="{{ ansible_date_time.date }}_{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}_{{ iperf_server }}_{{ inventory_hostname }}.out"
 
   - name: set iperf out
     set_fact: iperf_out="iperf_{{ output_base }}"
@@ -19,26 +28,33 @@
   - name: set mtr out
     set_fact: mtr_out="mtr_{{ output_base }}"
 
+  - name: print iperf out and mtr out
+    debug:
+      msg: 
+       - "{{ iperf_out }}"
+       - "{{ mtr_out }}"
+
   - name: start client iperf
-    shell: "iperf3 --client {{ iperf_server }} --time 60 >> {{ iperf_out }}"
+    shell: "iperf --client {{ iperf_server }} --time 10 -i 1 -P 10 >> {{ iperf_out }}"
 
   - name: start client mtr
-    shell: "/usr/sbin/mtr --report {{ iperf_server }} -c 60 >> {{ mtr_out }}"
-
+    shell: "/usr/sbin/mtr --report {{ iperf_server }} -c 10 >> {{ mtr_out }}"
+ 
   - name: grab iperf output
-    fetch: src={{ iperf_out }} dest=results/ flat=yes
+    fetch: src={{ iperf_out }} dest={{ output_dir }} flat=yes
 
   - name: grab mtr output
-    fetch: src={{ mtr_out }} dest=results/ flat=yes
+    fetch: src={{ mtr_out }} dest={{ output_dir }} flat=yes
 
-- hosts: localhost
-  connection: local
+- hosts: servers
+  remote_user: root
   tasks:
-  - name: stats
-    tags: stats
-    shell: "tail -n 3 results/iperf*.out | awk '/Gbits/ { sum += $7; n++} END { print sum / n }'"
-    register: stats
-  - name: print stats
-    tags: stats
-    debug: msg="Average iperf bandwidth {{ stats.stdout }} Gbits/s"
-
+  - name: kill iperf
+    shell: "pkill -x iperf"
+                                
+- hosts: localhost              
+  connection: local             
+  tasks:                        
+  - name: print results directory
+    debug:
+       msg: " Results directory is /tmp/iperf "
