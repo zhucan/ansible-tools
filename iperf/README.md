@@ -16,7 +16,7 @@ an even number of hosts so that iperf can pair servers and clients together.
 ## Execution:
 
 ```
- $ ansible-playbook -i ./hosts.example.ini perf.yml
+ $ ansible-playbook -i ./hosts.example.ini iperf.yml
 ```
 
-The results after the execution go into a _results_ directory.
+The results after the execution go into a /tmp/iperf directory.
