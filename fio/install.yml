@@ -1,7 +1,0 @@
-- hosts: hosts
-  remote_user: root
-  become: yes
-  become_method: sudo
-  tasks:
-  - name: install fio
-    yum: name=fio state=latest

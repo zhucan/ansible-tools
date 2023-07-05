@@ -1,0 +1,57 @@
+- hosts: hosts
+  remote_user: root
+  tasks:
+  - name: set output directory
+    set_fact:
+      output_dir="/tmp/bench-fio/"
+
+  - name: drop cache
+    shell: "echo 3 > /proc/sys/vm/drop_caches"
+
+  - name: prepare targets
+    set_fact:
+      _targets: "{{ groups['targets'] | join(' ') }}"
+
+  - name: prepare iodepth
+    set_fact:
+      _iodepth: "{{ groups['iodepth'] | join(' ') }}"
+
+  - name: prepare blocksize
+    set_fact:
+      _bs: "{{ groups['bs'] | join(' ') }}"
+
+  - name: prepare numjobs
+    set_fact:
+      _numjobs: "{{ groups['numjobs'] | join(' ') }}"
+
+  - name: prepare rw
+    set_fact:
+      _rw: "{{ groups['mode'] | join(' ') }}"
+
+  - name: print fio options
+    debug:
+      msg: 
+      - "target: {{ _targets }}"
+      - "iodepth: {{ _iodepth }}"
+      - "blocksize: {{ _bs }}"
+      - "numjobs: {{ _numjobs }}"
+      - "mode: {{ _rw }}"
+      
+  - name: run bench fio
+    shell: "/usr/local/bin/bench-fio  --target {{ _targets }} --type device --iodepth {{ _iodepth }} --numjobs {{ _numjobs }} --mode {{ _rw }} --output {{ output_dir }}{{ inventory_hostname }} --b {{ _bs }} --destructive --direct 1 --parallel"
+    async: 86400
+    poll: 0
+    register: fio_result
+
+  - name: check bench fio task polling results
+    async_status: jid={{ fio_result.ansible_job_id }}
+    register: job_result
+    until: job_result.finished
+    retries: 100
+    delay: 10
+
+  - name: grab fio output
+    synchronize:
+      src: "{{ output_dir }}"
+      dest: "{{ output_dir }}"
+      mode: pull
