@@ -7,7 +7,7 @@
 
   - name: clean exists output directory
     shell: "rm -rf {{ output_dir }}"
-    
+
   - name: drop cache
     shell: "echo 3 > /proc/sys/vm/drop_caches"
 
@@ -58,3 +58,9 @@
       src: "{{ output_dir }}"
       dest: "{{ output_dir }}"
       mode: pull
+
+
+       
+      
+      
+  

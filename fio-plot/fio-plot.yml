@@ -1,0 +1,70 @@
+- hosts: hosts
+  remote_user: root
+  tasks:
+  - name: set output dir
+    set_fact:
+      fio_output_dir: "/tmp/bench-fio"
+      dest_fio_plot_output_dir: "/tmp/fio-plot"
+      src_fio_plot_output_dir: "~/"
+
+  - name: clean exists source graphs
+    shell: "rm -f {{ src_fio_plot_output_dir }}/*plot_*.png"
+  
+  - name: fio plot with different numjobs
+    vars:
+      _numjobs: "{{ groups['numjobs'] | join(' ') }}"
+    shell: "/usr/local/bin/fio-plot -i {{ fio_output_dir }}/{{ ansible_host }}/{{ (item.0).split('/')[2] }}/{{ item.1}} -T \"fio_plot_numbjobs_{{ ansible_host }}_{{ (item.0).split('/')[2] }}_{{ item.1 }}_{{ item.2 }}\" -N -r {{ item.2 }} -n {{ _numjobs }}"
+    with_nested:
+      - "{{ groups['targets'] }}"
+      - "{{ groups['bs'] }}"
+      - "{{ groups['mode'] }}"
+
+  - name: fio plot with different iodepth
+    vars:
+      _iodepth: "{{ groups['iodepth'] | join(' ') }}"
+    shell: "/usr/local/bin/fio-plot -i {{ fio_output_dir }}/{{ ansible_host }}/{{ (item.0).split('/')[2] }}/{{ item.1 }} -T \"fio_plot_iodepth_{{ ansible_host }}_{{ (item.0).split('/')[2] }}_{{ item.1 }}_{{ item.2 }}\" -N -r {{ item.2 }} -n {{ _iodepth }}"
+    with_nested:
+      - "{{ groups['targets'] }}"
+      - "{{ groups['bs'] }}"  
+      - "{{ groups['mode'] }}"
+  
+  - name: generate compare dir suffix
+    set_fact:
+      _compare_dir_suffix: "{{ _compare_dir_suffix | default([]) +  [ (item.1).split('/')[2] + '/' + item.0 ] }}" 
+    with_nested:
+      - "{{ groups['bs'] }}"
+      - "{{ groups['targets'] }}"
+
+  - name: print compare dir suffix
+    debug:
+      msg: "{{ _compare_dir_suffix }}"
+
+  - name: set compare dir prefix
+    set_fact:
+      _compare_dir_prefix: "{{ fio_output_dir + '/' + ansible_host}}"
+
+  - name: set absolute path
+    set_fact:
+      _absolute_path: "{{ _absolute_path | default([]) + [ item.0 + '/' + item.1 ]}}"
+    with_nested:
+      - "{{ _compare_dir_prefix }}"
+      - "{{ _compare_dir_suffix }}"
+  
+  - name: print absolute path
+    debug:
+      msg: "{{ _absolute_path }}"
+
+  - name: run fio-plot with compare all devices
+    vars:
+      all_dirs: "{{  _absolute_path | join(' ') }}"
+    shell: "/usr/local/bin/fio-plot -i {{ all_dirs }} -T \"fio_plot_compare_{{ ansible_host }}_{{ item.2 }}_{{ item.1 }}_{{ item.0 }}\" -C -r {{ item.2 }}  --xlabel-parent 1 -d {{ item.0 }} -n {{ item.1 }}"
+    with_nested: 
+      - "{{ groups['iodepth'] }}"
+      - "{{ groups['numjobs'] }}"
+      - "{{ groups['mode'] }}"
+
+  - name: grab fio output
+    synchronize:
+      src: "{{ src_fio_plot_output_dir }}/*_plot_*.png"
+      dest: "{{ dest_fio_plot_output_dir }}/{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}"
+      mode: pull
