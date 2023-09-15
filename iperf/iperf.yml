@@ -1,6 +1,12 @@
 - hosts: servers
   remote_user: root
   tasks:
+  - name: stop firewalld service
+    shell: "systemctl stop firewalld.service"
+
+  - name: disable firewalld service
+    shell: "systemctl disable firewalld.service"
+    
   - name: start server iperf
     shell: iperf --server --daemon
 
@@ -8,6 +14,12 @@
   remote_user: root
   serial: 1
   tasks:
+  - name: stop firewalld service
+    shell: "systemctl stop firewalld.service"
+
+  - name: disable firewalld service
+    shell: "systemctl disable firewalld.service"
+
   - name: set iperf server
     with_inventory_hostnames: ["servers"]
     set_fact: iperf_server="{{ item }}"
@@ -25,26 +37,16 @@
   - name: set iperf out
     set_fact: iperf_out="iperf_{{ output_base }}"
 
-  - name: set mtr out
-    set_fact: mtr_out="mtr_{{ output_base }}"
-
-  - name: print iperf out and mtr out
+  - name: print iperf out
     debug:
       msg: 
        - "{{ iperf_out }}"
-       - "{{ mtr_out }}"
 
   - name: start client iperf
     shell: "iperf --client {{ iperf_server }} --time 10 -i 1 -P 10 >> {{ iperf_out }}"
-
-  - name: start client mtr
-    shell: "/usr/sbin/mtr --report {{ iperf_server }} -c 10 >> {{ mtr_out }}"
  
   - name: grab iperf output
     fetch: src={{ iperf_out }} dest={{ output_dir }} flat=yes
-
-  - name: grab mtr output
-    fetch: src={{ mtr_out }} dest={{ output_dir }} flat=yes
 
 - hosts: servers
   remote_user: root

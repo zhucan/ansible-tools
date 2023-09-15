@@ -1,0 +1,31 @@
+- hosts: localhosts
+  remote_user: root
+  tasks:
+  - name:  download sshpass
+    shell: wget https://rpmfind.net/linux/centos/8-stream/AppStream/x86_64/os/Packages/sshpass-1.09-4.el8.x86_64.rpm"
+  - name: install sshpass
+    shell: "rpm -Uvh sshpass-1.09-4.el8.x86_64.rpm"
+
+- hosts: hosts
+  remote_user: root
+  tasks:
+  - name:  cd
+    shell: "cd /etc/yum.repos.d/"
+  - name: sed
+    shell: "sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*"
+  - name: sed
+    shell: "sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*"
+  - name: install epel-release
+    shell: "dnf install epel-release -y"
+  - name: install iperf
+    shell: "dnf install iperf -y"
+  - name: install python3 and python3-pip
+    shell: "dnf install python3 python3-pip -y"
+  - name: upgrade pip3
+    shell: "pip3 install --upgrade pip -i  https://pypi.tuna.tsinghua.edu.cn/simple/"
+  - name: install fio
+    shell: "dnf install fio"
+  - name: install fio-plot
+    shell: "pip3 install fio-plot==1.1.7 -i  https://pypi.tuna.tsinghua.edu.cn/simple/"
+  - name: install sysstat
+    shell: "dnf install sysstat"

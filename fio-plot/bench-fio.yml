@@ -53,11 +53,11 @@
     retries: 100
     delay: 10
 
-  - name: grab fio output
-    synchronize:
-      src: "{{ output_dir }}"
-      dest: "{{ output_dir }}"
-      mode: pull
+  # - name: grab fio output
+  #   synchronize:
+  #     src: "{{ output_dir }}"
+  #     dest: "{{ output_dir }}"
+  #     mode: pull
 
 
        

@@ -4,11 +4,17 @@
   - name: set output dir
     set_fact:
       fio_output_dir: "/tmp/bench-fio"
-      dest_fio_plot_output_dir: "/tmp/fio-plot"
-      src_fio_plot_output_dir: "~/"
+      dest_fio_plot_output_dir: "/tmp/fio-plot-total/"
+      src_fio_plot_output_dir: "/tmp/fio-plot/"
+
+  - name: clean total graphs
+    shell: "rm -rf {{ dest_fio_plot_output_dir }}"
 
   - name: clean exists source graphs
-    shell: "rm -f {{ src_fio_plot_output_dir }}/*plot_*.png"
+    shell: "rm -rf {{ src_fio_plot_output_dir }}"
+
+  - name: create workdir
+    shell: "mkdir {{ src_fio_plot_output_dir }}"
   
   - name: fio plot with different numjobs
     vars:
@@ -32,7 +38,7 @@
     set_fact:
       _compare_dir_suffix: "{{ _compare_dir_suffix | default([]) +  [ (item.1).split('/')[2] + '/' + item.0 ] }}" 
     with_nested:
-      - "{{ groups['bs'] }}"
+      - ['4k']
       - "{{ groups['targets'] }}"
 
   - name: print compare dir suffix
@@ -57,7 +63,7 @@
   - name: run fio-plot with compare all devices
     vars:
       all_dirs: "{{  _absolute_path | join(' ') }}"
-    shell: "/usr/local/bin/fio-plot -i {{ all_dirs }} -T \"fio_plot_compare_{{ ansible_host }}_{{ item.2 }}_{{ item.1 }}_{{ item.0 }}\" -C -r {{ item.2 }}  --xlabel-parent 1 -d {{ item.0 }} -n {{ item.1 }}"
+    shell: "/usr/local/bin/fio-plot -i {{ all_dirs }} -T \"fio_plot_compare_{{ ansible_host }}_{{ item.2 }}_{{ item.1 }}_{{ item.0 }}\" -C -r {{ item.2 }}  --xlabel-parent 1 -d {{ item.0 }} -n {{ item.1 }} -o {{ src_fio_plot_output_dir }}/fio_plot_compare_{{ ansible_host }}_{{ item.2 }}_{{ item.1 }}_{{ item.0 }}.png"
     with_nested: 
       - "{{ groups['iodepth'] }}"
       - "{{ groups['numjobs'] }}"
@@ -65,6 +71,6 @@
 
   - name: grab fio output
     synchronize:
-      src: "{{ src_fio_plot_output_dir }}/*_plot_*.png"
-      dest: "{{ dest_fio_plot_output_dir }}/{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}"
+      src: "{{ src_fio_plot_output_dir }}"
+      dest: "{{ dest_fio_plot_output_dir }}"
       mode: pull
