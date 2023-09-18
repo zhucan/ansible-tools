@@ -1,0 +1,13 @@
+- hosts: hosts
+  remote_user: root
+  gather_facts: false
+  tasks:
+  - name: set hostname prefix
+    with_inventory_hostnames: ["hostname_prefix"]
+    set_fact: hostname_prefix="{{ item }}-node"
+  - name: set hostname suffix
+    set_fact: index={{ groups["hosts"].index(inventory_hostname) | int + 1 }} 
+  - name:  update hostname config
+    shell: "echo {{ hostname_prefix }}{{ '%02x' | format(index|int) }} > /etc/hostname"
+  - name: update hostname online
+    shell: "hostname {{ hostname_prefix }}{{ '%02x' | format(index|int) }}"
