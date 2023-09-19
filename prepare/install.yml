@@ -2,9 +2,11 @@
   remote_user: root
   tasks:
   - name:  download sshpass
-    shell: wget https://rpmfind.net/linux/centos/8-stream/AppStream/x86_64/os/Packages/sshpass-1.09-4.el8.x86_64.rpm"
+    shell: "wget -N https://rpmfind.net/linux/centos/8-stream/AppStream/x86_64/os/Packages/sshpass-1.09-4.el8.x86_64.rpm"
   - name: install sshpass
-    shell: "rpm -Uvh sshpass-1.09-4.el8.x86_64.rpm"
+    shell: "rpm -Uvh sshpass-1.09-4.el8.x86_64.rpm --force"
+  - name: clean sshpass rpm
+    shell: "rm sshpass-1.09-4.el8.x86_64.rpm"
 
 - hosts: hosts
   remote_user: root
