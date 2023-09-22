@@ -1,13 +1,3 @@
-- hosts: localhost
-  remote_user: root
-  tasks:
-  - name:  download sshpass
-    shell: "wget -N https://rpmfind.net/linux/centos/8-stream/AppStream/x86_64/os/Packages/sshpass-1.09-4.el8.x86_64.rpm"
-  - name: install sshpass
-    shell: "rpm -Uvh sshpass-1.09-4.el8.x86_64.rpm --force"
-  - name: clean sshpass rpm
-    shell: "rm sshpass-1.09-4.el8.x86_64.rpm"
-
 - hosts: hosts
   remote_user: root
   tasks:
@@ -26,8 +16,8 @@
   - name: upgrade pip3
     shell: "pip3 install --upgrade pip -i  https://pypi.tuna.tsinghua.edu.cn/simple/"
   - name: install fio
-    shell: "dnf install fio"
+    shell: "dnf install fio -y"
   - name: install fio-plot
     shell: "pip3 install fio-plot==1.1.7 -i  https://pypi.tuna.tsinghua.edu.cn/simple/"
   - name: install sysstat
-    shell: "dnf install sysstat"
+    shell: "dnf install sysstat -y"
