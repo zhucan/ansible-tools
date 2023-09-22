@@ -8,6 +8,9 @@
   - name: clean exists output directory
     shell: "rm -rf {{ output_dir }}"
 
+  - name: create output directory
+    shell: "mkdir {{ output_dir }}"
+
   - name: drop cache
     shell: "echo 3 > /proc/sys/vm/drop_caches"
 
