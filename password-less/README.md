@@ -1,9 +1,3 @@
-1. install ansible
-2. install sshpass
-
-
-dnf install epel-release
-
-dnf install python3 python3-pip
-
-pip3 install ansible
+1. sh prepare.sh
+2. update config.ini
+3. run "ansible-playhook -i config.ini password-less-ssh.yml"
