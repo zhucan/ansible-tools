@@ -8,6 +8,6 @@
   - name: set hostname suffix
     set_fact: index={{ groups["hosts"].index(inventory_hostname) | int + 1 }} 
   - name:  update hostname config
-    shell: "echo {{ hostname_prefix }}{{ '%02x' | format(index|int) }} > /etc/hostname"
+    shell: "echo {{ hostname_prefix }}{{ '%02d' | format(index|int) }} > /etc/hostname"
   - name: update hostname online
-    shell: "hostname {{ hostname_prefix }}{{ '%02x' | format(index|int) }}"
+    shell: "hostname {{ hostname_prefix }}{{ '%02d' | format(index|int) }}"
