@@ -1,0 +1,56 @@
+---
+# Ansible Inventory for GPU Analysis Project
+# 定义目标主机和组
+
+all:
+  children:
+    gpu_nodes:
+      hosts:
+        gpu-node-1:
+          ansible_host: 192.168.1.100
+          ansible_user: ubuntu
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          gpu_count: 2
+          gpu_type: "RTX 3080"
+        gpu-node-2:
+          ansible_host: 192.168.1.101
+          ansible_user: ubuntu
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          gpu_count: 4
+          gpu_type: "RTX 4090"
+        gpu-node-3:
+          ansible_host: 192.168.1.102
+          ansible_user: ubuntu
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          gpu_count: 1
+          gpu_type: "RTX 3060"
+      vars:
+        # 全局变量
+        project_path: "/opt/gpu-analysis"
+        python_version: "3.9"
+        nvidia_driver_version: "525"
+        cuda_version: "11.8"
+        
+    monitoring_nodes:
+      hosts:
+        monitor-node-1:
+          ansible_host: 192.168.1.200
+          ansible_user: ubuntu
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      vars:
+        # 监控节点配置
+        monitoring_port: 8080
+        data_retention_days: 30
+        
+    # 本地开发环境
+    local_dev:
+      hosts:
+        localhost:
+          ansible_connection: local
+          ansible_python_interpreter: "{{ ansible_playbook_python }}"
+          gpu_count: 1
+          gpu_type: "RTX 5090"
+      vars:
+        project_path: "/opt/gpu-analysis"
+        development_mode: true
+        python_version: "3.9"

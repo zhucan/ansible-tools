@@ -1,0 +1,37 @@
+{
+  "monitor_interval": {{ monitor_interval | default(1) }},
+  "save_interval": {{ save_interval | default(30) }},
+  "max_memory_samples": {{ max_memory_samples | default(1000) }},
+  "gpu_specs": {
+    "max_power": {{ gpu_max_power | default(360) }},
+    "max_temp": {{ gpu_max_temp | default(83) }},
+    "boost_clock": {{ gpu_boost_clock | default(2620) }},
+    "expected_gflops": {{ gpu_expected_gflops | default(0) }},
+    "gpu_name": "{{ gpu_name | default('Unknown GPU') }}"
+  },
+  "performance_thresholds": {
+    "excellent_utilization": {{ excellent_utilization | default(95.0) }},
+    "good_utilization": {{ good_utilization | default(90.0) }},
+    "high_temp_warning": {{ high_temp_warning | default(80.0) }},
+    "critical_temp": {{ critical_temp | default(83.0) }},
+    "optimal_power_ratio": {{ optimal_power_ratio | default(0.9) }}
+  },
+  "log_level": "{{ log_level | default('INFO') }}",
+  "log_format": "{{ log_format | default('%(asctime)s - %(name)s - %(levelname)s - %(message)s') }}",
+  "log_file": {{ log_file | default('null') | to_json }},
+  "validation_config": {
+    "enable_validation": {{ enable_validation | default(true) | to_json }},
+    "max_utilization": {{ max_utilization | default(100.0) }},
+    "min_utilization": {{ min_utilization | default(0.0) }},
+    "max_temperature": {{ max_temperature | default(100.0) }},
+    "min_temperature": {{ min_temperature | default(0.0) }},
+    "max_power": {{ max_power | default(1000.0) }},
+    "min_power": {{ min_power | default(0.0) }}
+  },
+  "error_handling": {
+    "max_retries": {{ max_retries | default(3) }},
+    "retry_delay": {{ retry_delay | default(1) }},
+    "enable_fallback": {{ enable_fallback | default(true) | to_json }},
+    "log_errors": {{ log_errors | default(true) | to_json }}
+  }
+}

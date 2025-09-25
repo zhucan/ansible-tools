@@ -1,0 +1,39 @@
+# Python依赖包列表
+# GPU分析项目所需的Python包
+
+# 核心依赖
+nvidia-ml-py3==11.495.46
+psutil==5.9.5
+GPUtil==1.4.0
+
+# 数据处理
+numpy==1.24.3
+pandas==2.0.3
+scipy==1.11.1
+
+# 监控和日志
+prometheus-client==0.17.1
+structlog==23.1.0
+
+# 网络和API
+requests==2.31.0
+flask==2.3.3
+fastapi==0.103.1
+uvicorn==0.23.2
+
+# 配置管理
+pyyaml==6.0.1
+python-dotenv==1.0.0
+
+# 测试
+pytest==7.4.2
+pytest-cov==4.1.0
+pytest-mock==3.11.1
+
+# 开发工具
+black==23.7.0
+flake8==6.0.0
+mypy==1.5.1
+
+# 系统监控
+systemd-python==235

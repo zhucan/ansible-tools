@@ -1,0 +1,387 @@
+---
+# GPU Analysis Project - Ansible Playbook
+# 用于部署和运行GPU分析项目的Ansible自动化脚本
+
+- name: "GPU Analysis Project Deployment"
+  hosts: gpu_nodes
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # 项目配置
+    project_name: "gpu-analysis"
+    project_path: "{{ project_path | default('/opt/gpu-analysis') }}"
+    python_version: "{{ python_version | default('3.9') }}"
+    
+    # GPU配置
+    gpu_count: "{{ gpu_count | default(1) }}"
+    gpu_type: "{{ gpu_type | default('Unknown') }}"
+    
+    # 监控配置
+    monitor_interval: 1
+    save_interval: 30
+    max_memory_samples: 1000
+    
+    # 性能阈值
+    excellent_utilization: 95.0
+    good_utilization: 90.0
+    high_temp_warning: 80.0
+    critical_temp: 83.0
+    optimal_power_ratio: 0.9
+    
+    # GPU规格（根据GPU类型自动调整）
+    gpu_specs:
+      "RTX 5090":
+        max_power: 500
+        max_temp: 83
+        boost_clock: 2750
+        expected_gflops: 100000
+      "RTX 3080":
+        max_power: 320
+        max_temp: 83
+        boost_clock: 1710
+        expected_gflops: 29700
+      "RTX 4090":
+        max_power: 450
+        max_temp: 83
+        boost_clock: 2520
+        expected_gflops: 83000
+      "RTX 3060":
+        max_power: 170
+        max_temp: 83
+        boost_clock: 1777
+        expected_gflops: 12800
+      "default":
+        max_power: 360
+        max_temp: 83
+        boost_clock: 2620
+        expected_gflops: 0
+    
+    # 日志配置
+    log_level: "INFO"
+    log_file: "{{ project_path }}/logs/gpu_analysis.log"
+    
+    # 数据验证
+    enable_validation: true
+    max_utilization: 100.0
+    min_utilization: 0.0
+    max_temperature: 100.0
+    min_temperature: 0.0
+    max_power: 1000.0
+    min_power: 0.0
+    
+    # 错误处理
+    max_retries: 3
+    retry_delay: 1
+    enable_fallback: true
+    log_errors: true
+
+  pre_tasks:
+    - name: "检查系统要求"
+      block:
+        - name: "检查操作系统"
+          fail:
+            msg: "不支持的操作系统: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          when: ansible_distribution not in ['Ubuntu', 'CentOS', 'RHEL', 'Debian']
+        
+        - name: "检查Python版本"
+          command: python3 --version
+          register: python_version_check
+          changed_when: false
+        
+        - name: "验证Python版本"
+          fail:
+            msg: "Python版本过低: {{ python_version_check.stdout }}"
+          when: python_version_check.stdout is not search("Python 3\.[6-9]")
+
+  tasks:
+    - name: "更新系统包"
+      package:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - git
+          - curl
+          - wget
+          - htop
+          - nvidia-smi
+        state: present
+      when: ansible_distribution in ['Ubuntu', 'Debian']
+
+    - name: "安装EPEL仓库 (CentOS/RHEL)"
+      yum:
+        name: epel-release
+        state: present
+      when: ansible_distribution in ['CentOS', 'RHEL']
+
+    - name: "安装基础包 (CentOS/RHEL)"
+      yum:
+        name:
+          - python3
+          - python3-pip
+          - git
+          - curl
+          - wget
+          - htop
+        state: present
+      when: ansible_distribution in ['CentOS', 'RHEL']
+
+    - name: "检查NVIDIA驱动"
+      command: nvidia-smi
+      register: nvidia_check
+      failed_when: nvidia_check.rc != 0
+      changed_when: false
+
+    - name: "显示GPU信息"
+      debug:
+        msg: "{{ nvidia_check.stdout_lines }}"
+
+    - name: "创建项目目录"
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+      loop:
+        - "{{ project_path }}"
+        - "{{ project_path }}/scripts"
+        - "{{ project_path }}/config"
+        - "{{ project_path }}/data"
+        - "{{ project_path }}/logs"
+        - "{{ project_path }}/venv"
+
+    - name: "创建Python虚拟环境"
+      pip:
+        name: virtualenv
+        state: present
+        executable: pip3
+
+    - name: "初始化Python虚拟环境"
+      command: "python3 -m venv {{ project_path }}/venv"
+      args:
+        creates: "{{ project_path }}/venv/bin/activate"
+
+    - name: "升级pip"
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ project_path }}/venv"
+        virtualenv_python: python3
+
+    - name: "安装Python依赖"
+      pip:
+        requirements: "{{ playbook_dir }}/requirements.txt"
+        virtualenv: "{{ project_path }}/venv"
+        virtualenv_python: python3
+
+    - name: "复制项目文件"
+      copy:
+        src: "{{ playbook_dir }}/../scripts/"
+        dest: "{{ project_path }}/scripts/"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: "生成配置文件"
+      template:
+        src: "{{ playbook_dir }}/templates/config.json.j2"
+        dest: "{{ project_path }}/config/config.json"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      vars:
+        gpu_max_power: "{{ gpu_specs[gpu_type]['max_power'] if gpu_type in gpu_specs else gpu_specs['default']['max_power'] }}"
+        gpu_max_temp: "{{ gpu_specs[gpu_type]['max_temp'] if gpu_type in gpu_specs else gpu_specs['default']['max_temp'] }}"
+        gpu_boost_clock: "{{ gpu_specs[gpu_type]['boost_clock'] if gpu_type in gpu_specs else gpu_specs['default']['boost_clock'] }}"
+        gpu_expected_gflops: "{{ gpu_specs[gpu_type]['expected_gflops'] if gpu_type in gpu_specs else gpu_specs['default']['expected_gflops'] }}"
+        gpu_name: "{{ gpu_type }}"
+
+
+  post_tasks:
+    - name: "创建手动运行脚本"
+      copy:
+        content: |
+          #!/bin/bash
+          # GPU分析项目手动运行脚本
+          
+          PROJECT_PATH="{{ project_path }}"
+          VENV_PATH="$PROJECT_PATH/venv"
+          
+          echo "启动GPU分析监控..."
+          echo "项目路径: $PROJECT_PATH"
+          echo "虚拟环境: $VENV_PATH"
+          
+          # 激活虚拟环境
+          source $VENV_PATH/bin/activate
+          
+          # 设置环境变量
+          export PYTHONPATH="$PROJECT_PATH/scripts"
+          export CUDA_VISIBLE_DEVICES=all
+          
+          # 启动监控
+          cd $PROJECT_PATH/scripts
+          python3 monitor_gpu_optimized.py \
+              --output $PROJECT_PATH/data/gpu_monitor.json \
+              --config $PROJECT_PATH/config/config.json \
+              --interval {{ monitor_interval }} \
+              --save-interval {{ save_interval }}
+        dest: "{{ project_path }}/run_monitor.sh"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: "验证部署"
+      block:
+        - name: "检查配置文件"
+          stat:
+            path: "{{ project_path }}/config/config.json"
+          register: config_file
+
+        - name: "检查Python脚本"
+          stat:
+            path: "{{ project_path }}/scripts/monitor_gpu_optimized.py"
+          register: monitor_script
+
+        - name: "检查运行脚本"
+          stat:
+            path: "{{ project_path }}/run_monitor.sh"
+          register: run_script
+
+        - name: "显示部署结果"
+          debug:
+            msg: |
+              部署完成！
+              配置文件: {{ '存在' if config_file.stat.exists else '缺失' }}
+              监控脚本: {{ '存在' if monitor_script.stat.exists else '缺失' }}
+              运行脚本: {{ '存在' if run_script.stat.exists else '缺失' }}
+              项目路径: {{ project_path }}
+              日志文件: {{ project_path }}/logs/gpu_analysis.log
+
+    - name: "创建后台运行脚本"
+      copy:
+        content: |
+          #!/bin/bash
+          # GPU分析项目后台运行脚本
+          
+          PROJECT_PATH="{{ project_path }}"
+          VENV_PATH="$PROJECT_PATH/venv"
+          PID_FILE="$PROJECT_PATH/gpu_monitor.pid"
+          
+          echo "启动GPU分析监控（后台运行）..."
+          echo "项目路径: $PROJECT_PATH"
+          echo "虚拟环境: $VENV_PATH"
+          
+          # 检查是否已经在运行
+          if [[ -f "$PID_FILE" ]]; then
+              PID=$(cat "$PID_FILE")
+              if ps -p $PID > /dev/null 2>&1; then
+                  echo "监控已在运行 (PID: $PID)"
+                  exit 1
+              else
+                  rm -f "$PID_FILE"
+              fi
+          fi
+          
+          # 激活虚拟环境并后台运行
+          nohup bash -c "
+              source $VENV_PATH/bin/activate
+              export PYTHONPATH=\"$PROJECT_PATH/scripts\"
+              export CUDA_VISIBLE_DEVICES=all
+              cd $PROJECT_PATH/scripts
+              python3 monitor_gpu_optimized.py \
+                  --output $PROJECT_PATH/data/gpu_monitor.json \
+                  --config $PROJECT_PATH/config/config.json \
+                  --interval {{ monitor_interval }} \
+                  --save-interval {{ save_interval }}
+          " > $PROJECT_PATH/logs/monitor.log 2>&1 &
+          
+          # 保存PID
+          echo $! > "$PID_FILE"
+          echo "监控已启动 (PID: $!)"
+          echo "日志文件: $PROJECT_PATH/logs/monitor.log"
+        dest: "{{ project_path }}/start_background.sh"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: "创建停止脚本"
+      copy:
+        content: |
+          #!/bin/bash
+          # 停止GPU监控进程
+          
+          PROJECT_PATH="{{ project_path }}"
+          PID_FILE="$PROJECT_PATH/gpu_monitor.pid"
+          
+          echo "停止GPU监控..."
+          
+          if [[ -f "$PID_FILE" ]]; then
+              PID=$(cat "$PID_FILE")
+              if ps -p $PID > /dev/null 2>&1; then
+                  kill $PID
+                  rm -f "$PID_FILE"
+                  echo "监控已停止 (PID: $PID)"
+              else
+                  echo "监控进程不存在"
+                  rm -f "$PID_FILE"
+              fi
+          else
+              echo "PID文件不存在，尝试查找进程..."
+              pkill -f "monitor_gpu_optimized.py"
+              echo "已尝试停止所有相关进程"
+          fi
+        dest: "{{ project_path }}/stop_monitor.sh"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: "创建状态检查脚本"
+      copy:
+        content: |
+          #!/bin/bash
+          # GPU监控状态检查脚本
+          
+          PROJECT_PATH="{{ project_path }}"
+          PID_FILE="$PROJECT_PATH/gpu_monitor.pid"
+          
+          echo "=== GPU监控进程状态 ==="
+          if [[ -f "$PID_FILE" ]]; then
+              PID=$(cat "$PID_FILE")
+              if ps -p $PID > /dev/null 2>&1; then
+                  echo "监控正在运行 (PID: $PID)"
+                  echo "进程信息:"
+                  ps -p $PID -o pid,ppid,cmd,etime
+              else
+                  echo "PID文件存在但进程不存在"
+                  rm -f "$PID_FILE"
+              fi
+          else
+              echo "PID文件不存在"
+          fi
+          
+          echo -e "\n=== 查找相关进程 ==="
+          ps aux | grep -E "(monitor_gpu|gpu_analysis)" | grep -v grep || echo "未找到相关进程"
+          
+          echo -e "\n=== 数据文件 ==="
+          ls -la {{ project_path }}/data/ 2>/dev/null || echo "数据目录不存在"
+          
+          echo -e "\n=== 配置文件 ==="
+          if [[ -f "{{ project_path }}/config/config.json" ]]; then
+              cat {{ project_path }}/config/config.json
+          else
+              echo "配置文件不存在"
+          fi
+          
+          echo -e "\n=== 日志文件 ==="
+          if [[ -f "{{ project_path }}/logs/monitor.log" ]]; then
+              echo "最近日志:"
+              tail -n 20 {{ project_path }}/logs/monitor.log
+          else
+              echo "日志文件不存在"
+          fi
+        dest: "{{ project_path }}/check_status.sh"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'

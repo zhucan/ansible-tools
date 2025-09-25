@@ -1,0 +1,38 @@
+{
+  "monitor_interval": 1,
+  "save_interval": 30,
+  "max_memory_samples": 1000,
+  "gpu_specs": {
+    "max_power": 360,
+    "max_temp": 83,
+    "boost_clock": 2620,
+    "expected_gflops": 0,
+    "gpu_name": "Unknown GPU"
+  },
+  "performance_thresholds": {
+    "excellent_utilization": 95.0,
+    "good_utilization": 90.0,
+    "high_temp_warning": 80.0,
+    "critical_temp": 83.0,
+    "optimal_power_ratio": 0.9
+  },
+  "log_level": "INFO",
+  "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+  "log_file": null,
+  "validation_config": {
+    "enable_validation": true,
+    "max_utilization": 100.0,
+    "min_utilization": 0.0,
+    "max_temperature": 100.0,
+    "min_temperature": 0.0,
+    "max_power": 1000.0,
+    "min_power": 0.0
+  },
+  "error_handling": {
+    "max_retries": 3,
+    "retry_delay": 1,
+    "enable_fallback": true,
+    "log_errors": true
+  }
+}
+
